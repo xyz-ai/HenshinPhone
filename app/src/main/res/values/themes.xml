@@ -1,6 +1,14 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="Theme.HenshinPhone" parent="Theme.Material3.DayNight.NoActionBar">
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.HenshinPhone"
+        parent="Theme.MaterialComponents.DayNight.NoActionBar">
+
+        <!-- 沉浸式状态栏，适合变身器 -->
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+
     </style>
+
 </resources>
