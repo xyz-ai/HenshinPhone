@@ -1,6 +1,8 @@
 package com.example.henshinphone.feature
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -8,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
+
 @Composable
 fun DeviceScreen(
     rules: List<TransformationRule>,
@@ -16,26 +19,15 @@ fun DeviceScreen(
 ) {
     var input by remember { mutableStateOf("") }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Faiz Phone") },
-                actions = {
-                    IconButton(onClick = onOpenSettings) {
-                        Text("⚙")
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
 
+        // 中央数字显示
+        Column(
+            modifier = Modifier.align(Alignment.Center),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Text(
                 text = input,
                 style = MaterialTheme.typography.headlineLarge
@@ -63,5 +55,19 @@ fun DeviceScreen(
                 }
             }
         }
+
+        // 右下角设置按钮（浮层）
+        IconButton(
+            onClick = onOpenSettings,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(24.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = "Settings"
+            )
+        }
     }
 }
+

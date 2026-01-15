@@ -15,13 +15,25 @@ sealed class Screen {
 fun HenshinPhoneApp() {
 
     var screen by remember { mutableStateOf<Screen>(Screen.Selector) }
+    var lastNonSettings by remember { mutableStateOf<Screen>(Screen.Selector) }
+
     val rules = TransformationRepository.rules
+
+    fun openSettings() {
+        // 记录进入设置前的页面
+        lastNonSettings = screen
+        screen = Screen.Settings
+    }
+
+    fun closeSettings() {
+        screen = lastNonSettings
+    }
 
     when (val s = screen) {
 
         Screen.Selector -> DeviceSelectorScreen(
             onDeviceSelected = { screen = Screen.Device },
-            onOpenSettings = { screen = Screen.Settings }
+            onOpenSettings = { openSettings() }
         )
 
         Screen.Device -> DeviceScreen(
@@ -29,7 +41,7 @@ fun HenshinPhoneApp() {
             onTransformationSelected = { rule ->
                 screen = Screen.Transforming(rule)
             },
-            onOpenSettings = { screen = Screen.Settings }
+            onOpenSettings = { openSettings() }
         )
 
         is Screen.Transforming -> TransformationScreen(
@@ -45,7 +57,7 @@ fun HenshinPhoneApp() {
         )
 
         Screen.Settings -> SettingsScreen(
-            onBack = { screen = Screen.Device }
+            onBack = { closeSettings() }
         )
     }
 }

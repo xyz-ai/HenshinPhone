@@ -56,38 +56,30 @@ fun DeviceSelectorScreen(
                 label = "KAIXA",
                 resId = R.drawable.belt_kaixa,
                 selected = false,
-                onClick = { /* 先占位，后续接多腰带 */ }
+                onClick = { /* TODO */ }
             )
 
             BeltIcon(
                 label = "DELTA",
                 resId = R.drawable.belt_delta,
                 selected = false,
-                onClick = { /* 占位 */ }
+                onClick = { /* TODO */ }
             )
 
             BeltIcon(
                 label = "MORE",
                 resId = R.drawable.belt_more,
                 selected = false,
-                onClick = { /* 占位 */ }
+                onClick = { /* TODO */ }
             )
         }
 
-        // 3) Bottom-right: settings panel (matches your mock)
-        SettingsPanel(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 22.dp, bottom = 20.dp),
-            onClick = onOpenSettings
-        )
-
-        // 4) Bottom-right gear button (optional but matches style)
+        // ✅ 3) 只保留右下角齿轮按钮：点击进入 Settings Screen
         IconButton(
             onClick = onOpenSettings,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 18.dp, bottom = 14.dp)
+                .padding(end = 22.dp, bottom = 18.dp)
                 .size(56.dp)
         ) {
             Icon(
@@ -112,7 +104,6 @@ private fun BeltIcon(
             .width(120.dp)
             .clickable(onClick = onClick)
     ) {
-        // 腰带透明 PNG
         Image(
             painter = painterResource(id = resId),
             contentDescription = label,
@@ -132,7 +123,6 @@ private fun BeltIcon(
             letterSpacing = 1.sp
         )
 
-        // 简单“选中底线”提示（先不做复杂光效）
         if (selected) {
             Spacer(modifier = Modifier.height(6.dp))
             Box(
@@ -143,83 +133,4 @@ private fun BeltIcon(
             )
         }
     }
-}
-
-@Composable
-private fun SettingsPanel(
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = modifier
-            .width(560.dp)
-            .height(180.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(Color(0xAA101010))
-            .clickable(onClick = onClick)
-            .padding(18.dp)
-    ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(18.dp),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            SettingRow(
-                titleEn = "Volume Control",
-                subCjk = "音量设置 / 音量調整"
-            )
-
-            DividerLine()
-
-            SettingRow(
-                titleEn = "Code & Animation",
-                subCjk = "数字变身 / コード変身"
-            )
-        }
-    }
-}
-
-@Composable
-private fun SettingRow(
-    titleEn: String,
-    subCjk: String
-) {
-    Row(
-        verticalAlignment = Alignment.Top,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        // 左侧小图标占位（后续可替换成你自己的 PNG）
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFF2A2A2A))
-        )
-
-        Spacer(modifier = Modifier.width(14.dp))
-
-        Column {
-            Text(
-                text = titleEn,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = subCjk,
-                fontSize = 16.sp,
-                color = Color(0xFFDDDDDD)
-            )
-        }
-    }
-}
-
-@Composable
-private fun DividerLine() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(1.dp)
-            .background(Color(0x33FFFFFF))
-    )
 }
