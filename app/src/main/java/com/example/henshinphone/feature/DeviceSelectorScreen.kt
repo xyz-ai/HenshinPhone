@@ -4,7 +4,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -13,7 +12,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -24,12 +22,12 @@ import com.example.henshinphone.R
 
 @Composable
 fun DeviceSelectorScreen(
-    onDeviceSelected: () -> Unit,
+    onDeviceSelected: (BeltType) -> Unit,
     onOpenSettings: () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
 
-        // 1) Background
+        // 背景
         Image(
             painter = painterResource(id = R.drawable.bg_selector_panel),
             contentDescription = null,
@@ -37,7 +35,7 @@ fun DeviceSelectorScreen(
             modifier = Modifier.fillMaxSize()
         )
 
-        // 2) Top-left: belt icons row
+        // 腰带行
         Row(
             modifier = Modifier
                 .align(Alignment.TopStart)
@@ -45,41 +43,35 @@ fun DeviceSelectorScreen(
             horizontalArrangement = Arrangement.spacedBy(26.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+
             BeltIcon(
                 label = "FAIZ",
                 resId = R.drawable.belt_faiz,
                 selected = true,
-                onClick = onDeviceSelected
+                onClick = { onDeviceSelected(BeltType.FAIZ) }
             )
 
             BeltIcon(
                 label = "KAIXA",
                 resId = R.drawable.belt_kaixa,
                 selected = false,
-                onClick = { /* TODO */ }
+                onClick = { onDeviceSelected(BeltType.KAIXA) }
             )
 
             BeltIcon(
                 label = "DELTA",
                 resId = R.drawable.belt_delta,
                 selected = false,
-                onClick = { /* TODO */ }
-            )
-
-            BeltIcon(
-                label = "MORE",
-                resId = R.drawable.belt_more,
-                selected = false,
-                onClick = { /* TODO */ }
+                onClick = { onDeviceSelected(BeltType.DELTA) }
             )
         }
 
-        // ✅ 3) 只保留右下角齿轮按钮：点击进入 Settings Screen
+        // 设置按钮
         IconButton(
             onClick = onOpenSettings,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 22.dp, bottom = 18.dp)
+                .padding(22.dp)
                 .size(56.dp)
         ) {
             Icon(

@@ -18,8 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun DeviceScreen(
-    belt: BeltType,
+fun FaizDeviceScreen(
     onCodeConfirmed: (TransformationRule) -> Unit,
     onOpenSettings: () -> Unit
 ) {
@@ -31,17 +30,22 @@ fun DeviceScreen(
             .background(Color.Black)
     ) {
 
-        // ===== 数字显示 =====
-        Text(
-            text = input.ifEmpty { "---" },
-            fontSize = 56.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 8.sp,
-            color = Color.Red,
-            modifier = Modifier.align(Alignment.Center)
-        )
+        // ===== 中央红色 LED 数字窗 =====
+        Box(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .padding(bottom = 120.dp)
+        ) {
+            Text(
+                text = input.ifEmpty { "---" },
+                fontSize = 64.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 10.sp,
+                color = Color(0xFFE53935)
+            )
+        }
 
-        // ===== 数字键盘 =====
+        // ===== 数字键盘（Faiz 风格）=====
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -49,14 +53,14 @@ fun DeviceScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             (1..9).chunked(3).forEach { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                     row.forEach { number ->
-                        DeviceKey(number) {
+                        FaizKey(number) {
                             if (input.length < 3) {
                                 input += number.toString()
                                 if (input.length == 3) {
                                     TransformationRepository
-                                        .findRule(belt, input)
+                                        .findRule(BeltType.FAIZ, input)
                                         ?.let { onCodeConfirmed(it) }
                                 }
                             }
@@ -66,7 +70,7 @@ fun DeviceScreen(
             }
         }
 
-        // ===== 设置 =====
+        // ===== 设置按钮 =====
         IconButton(
             onClick = onOpenSettings,
             modifier = Modifier
@@ -83,20 +87,21 @@ fun DeviceScreen(
 }
 
 @Composable
-private fun DeviceKey(
+private fun FaizKey(
     number: Int,
     onClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
             .size(72.dp)
-            .background(Color.DarkGray, CircleShape)
+            .background(Color(0xFF222222), CircleShape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = number.toString(),
-            fontSize = 22.sp,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
             color = Color.White
         )
     }
