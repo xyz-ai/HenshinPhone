@@ -2,33 +2,36 @@ package com.example.henshinphone.feature
 
 object TransformationRepository {
 
-    private val rules = listOf(
+    /**
+     * ⚠️ 注意：
+     * rules 是 private
+     * UI 永远不能直接访问集合本身
+     */
+    private val rules: Map<BeltType, List<TransformationRule>> = mapOf(
 
-        // ===== Faiz =====
-        TransformationRule(
-            belt = BeltType.FAIZ,
-            code = "555",
-            name = "Faiz",
-            videoAsset = "faiz_555.mp4",
-            soundAsset = "faiz_start.wav"
+        BeltType.FAIZ to listOf(
+            TransformationRule(
+                code = "555",
+                name = "Faiz",
+                videoAsset = "faiz_transformation.mp4",
+                soundAsset = "faiz_transformation.mp3"
+            )
         ),
 
-        // ===== Kaixa（示例，后续你加资源即可）=====
-        TransformationRule(
-            belt = BeltType.KAIXA,
-            code = "555",
-            name = "Kaixa",
-            videoAsset = "kaixa_555.mp4",
-            soundAsset = "kaixa_start.wav"
-        )
+        // 以后可以加
+        // BeltType.KAIXA to listOf(...)
     )
 
+    /** 获取某条腰带的全部规则（只读） */
+    fun getRulesForBelt(belt: BeltType): List<TransformationRule> {
+        return rules[belt].orEmpty()
+    }
+
+    /** 按“腰带 + 输入码”查规则（最常用） */
     fun findRule(
         belt: BeltType,
         code: String
     ): TransformationRule? {
-        return rules.find {
-            it.belt == belt && it.code == code
-        }
+        return rules[belt]?.find { it.code == code }
     }
 }

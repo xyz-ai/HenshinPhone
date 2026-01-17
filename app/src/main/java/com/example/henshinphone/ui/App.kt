@@ -14,66 +14,64 @@ sealed class Screen {
 @Composable
 fun HenshinPhoneApp() {
 
-    // ===== 轻量 Back Stack =====
-    val stack = remember {
-        mutableStateListOf<Screen>(Screen.Selector)
-    }
+    var screen by remember { mutableStateOf<Screen>(Screen.Selector) }
 
-    val current = stack.last()
+    when (val s = screen) {
 
-    fun push(screen: Screen) {
-        stack.add(screen)
-    }
-
-    fun pop() {
-        if (stack.size > 1) {
-            stack.removeLast()
-        }
-    }
-
-    when (val s = current) {
-
+        // ===============================
+        // 1️⃣ 腰带选择界面
+        // ===============================
         Screen.Selector -> DeviceSelectorScreen(
             onDeviceSelected = { belt ->
-                push(Screen.Device(belt))
+                screen = Screen.Device(belt)
             },
             onOpenSettings = {
-                push(Screen.Settings)
+                screen = Screen.Settings
             }
         )
 
-        is Screen.Device -> when (s.belt) {
-            BeltType.FAIZ -> FaizDeviceScreen(
-                onCodeConfirmed = { rule ->
-                    push(Screen.Transforming(rule))
-                },
-                onOpenSettings = {
-                    push(Screen.Settings)
-                }
-            )
-            // 以后加别的腰带，只在这里加分支
-            else -> {
-                // 占位
+        // ===============================
+        // 2️⃣ 设备界面（Faiz Phone）
+        // ===============================
+        is Screen.Device -> DeviceScreen(
+            belt = s.belt,
+            onTransformationSelected = { rule ->
+                screen = Screen.Transforming(rule)
+            },
+            onBack = {
+                screen = Screen.Selector
+            },
+            onOpenSettings = {
+                screen = Screen.Settings
             }
-        }
+        )
 
+        // ===============================
+        // 3️⃣ 变身中（不可返回）
+        // ===============================
         is Screen.Transforming -> TransformationScreen(
             rule = s.rule,
             onFinished = {
-                push(Screen.Playback(s.rule))
+                screen = Screen.Playback(s.rule)
             }
         )
 
+        // ===============================
+        // 4️⃣ 变身完成 / 视频播放
+        // ===============================
         is Screen.Playback -> MediaPlaybackScreen(
             rule = s.rule,
             onBack = {
-                pop() // 回到 Transforming 前的 Device
+                screen = Screen.Device(BeltType.FAIZ)
             }
         )
 
+        // ===============================
+        // 5️⃣ 设置界面
+        // ===============================
         Screen.Settings -> SettingsScreen(
             onBack = {
-                pop() // 回到进入设置前的界面
+                screen = Screen.Selector
             }
         )
     }
