@@ -1,153 +1,154 @@
 package com.example.henshinphone.feature
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import com.example.henshinphone.R
+import com.example.henshinphone.data.BeltType
+import com.example.henshinphone.data.TransformationRepository
+import com.example.henshinphone.data.TransformationRule
+import kotlin.math.roundToInt
 
-@Composable
-fun DeviceScreen(
-    rules: List<TransformationRule>,
-    onTransformationSelected: (TransformationRule) -> Unit,
-    onBack: () -> Unit,
-    onOpenSettings: () -> Unit
-) {
-    var input by remember { mutableStateOf("") }
+private data class HitArea(
+    val digit: String,
+    val centerXRatio: Float,
+    val centerYRatio: Float,
+    val widthRatio: Float,
+    val heightRatio: Float
+)
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black)
-    ) {
+private data class KeypadRatios(
+    val left: Float,
+    val right: Float,
+    val top: Float,
+    val bottom: Float,
+    val keyWidthScale: Float,
+    val keyHeightScale: Float
+)
 
-        // ===============================
-        // 1️⃣ Faiz Phone 外壳（纯视觉层）
-        // ===============================
-        androidx.compose.foundation.Image(
-            painter = painterResource(R.drawable.faiz_phone_base),
-            contentDescription = null,
-            modifier = Modifier
-                .align(Alignment.Center)
-                .fillMaxWidth(0.85f),
-            contentScale = androidx.compose.ui.layout.ContentScale.Fit
-        )
+private fun buildFaizHitAreas(): List<HitArea> {
+    val keypad = KeypadRatios(
+        left = 0.26f,
+        right = 0.74f,
+        top = 0.56f,
+        bottom = 0.88f,
+        keyWidthScale = 0.8f,
+        keyHeightScale = 0.75f
+    )
 
-        // ===============================
-        // 2️⃣ 屏幕显示区（红色 555）
-        // ===============================
-        Box(
-            modifier = Modifier
-                .align(Alignment.Center)
-                // ⚠️ 这个 offset 是“屏幕区域位置”，后面可以微调
-                .offset(y = (-120).dp)
-                .width(240.dp)
-                .height(70.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = if (input.isEmpty()) "···" else input,
-                fontSize = 36.sp,
-                color = Color(0xFFE53935),
-                letterSpacing = 4.sp
-            )
-        }
+    val columns = 3
+    val rows = 4
+    val cellWidth = (keypad.right - keypad.left) / columns
+    val cellHeight = (keypad.bottom - keypad.top) / rows
+    val keyWidth = cellWidth * keypad.keyWidthScale
+    val keyHeight = cellHeight * keypad.keyHeightScale
 
-        // ===============================
-        // 3️⃣ 数字键盘（覆盖在外壳上）
-        // ===============================
-        Column(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .offset(y = 120.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            (1..9).chunked(3).forEach { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                    row.forEach { number ->
-                        FaizKeyButton(
-                            number = number,
-                            onClick = {
-                                if (input.length < 3) {
-                                    input += number.toString()
-                                    rules.find { it.code == input }?.let {
-                                        input = ""
-                                        onTransformationSelected(it)
-                                    }
-                                }
-                            }
+    val digits = listOf(
+        listOf("1", "2", "3"),
+        listOf("4", "5", "6"),
+        listOf("7", "8", "9"),
+        listOf("", "0", "")
+    )
+
+    return buildList {
+        digits.forEachIndexed { rowIndex, row ->
+            row.forEachIndexed { columnIndex, digit ->
+                if (digit.isNotEmpty()) {
+                    val centerX = keypad.left + cellWidth * (columnIndex + 0.5f)
+                    val centerY = keypad.top + cellHeight * (rowIndex + 0.5f)
+                    add(
+                        HitArea(
+                            digit = digit,
+                            centerXRatio = centerX,
+                            centerYRatio = centerY,
+                            widthRatio = keyWidth,
+                            heightRatio = keyHeight
                         )
-                    }
+                    )
                 }
             }
-        }
-
-        // ===============================
-        // 4️⃣ 返回按钮（真正返回上一级）
-        // ===============================
-        IconButton(
-            onClick = onBack,
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(20.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.ArrowBack,
-                contentDescription = "Back",
-                tint = Color.White
-            )
-        }
-
-        // ===============================
-        // 5️⃣ 设置按钮
-        // ===============================
-        IconButton(
-            onClick = onOpenSettings,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(20.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Settings,
-                contentDescription = "Settings",
-                tint = Color.White
-            )
         }
     }
 }
 
 @Composable
-private fun FaizKeyButton(
-    number: Int,
-    onClick: () -> Unit
+fun FaizDeviceScreen(
+    onTransformSuccess: (TransformationRule) -> Unit
 ) {
+    var inputCode by remember { mutableStateOf("") }
+    var imageSize by remember { mutableStateOf(IntSize.Zero) }
+    val hitAreas = remember { buildFaizHitAreas() }
+    val density = LocalDensity.current
+
     Box(
-        modifier = Modifier
-            .size(64.dp)
-            .clip(CircleShape)
-            .background(Color(0xFF1F1F1F))
-            .clickable(onClick = onClick),
+        modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = number.toString(),
-            fontSize = 22.sp,
-            color = Color.White
+        Image(
+            painter = painterResource(R.drawable.faiz_phone_base),
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxWidth(0.85f)
+                .onSizeChanged { imageSize = it },
+            contentScale = ContentScale.Fit
         )
+
+        if (imageSize != IntSize.Zero) {
+            val imageWidthDp = with(density) { imageSize.width.toDp() }
+            val imageHeightDp = with(density) { imageSize.height.toDp() }
+            Box(
+                modifier = Modifier
+                    .size(imageWidthDp, imageHeightDp)
+                    .align(Alignment.Center)
+            ) {
+                hitAreas.forEach { area ->
+                    val areaWidthPx = imageSize.width * area.widthRatio
+                    val areaHeightPx = imageSize.height * area.heightRatio
+                    val offsetXPx = imageSize.width * area.centerXRatio - areaWidthPx / 2f
+                    val offsetYPx = imageSize.height * area.centerYRatio - areaHeightPx / 2f
+                    val areaWidthDp = with(density) { areaWidthPx.toDp() }
+                    val areaHeightDp = with(density) { areaHeightPx.toDp() }
+
+                    Box(
+                        modifier = Modifier
+                            .offset {
+                                IntOffset(
+                                    x = offsetXPx.roundToInt(),
+                                    y = offsetYPx.roundToInt()
+                                )
+                            }
+                            .size(areaWidthDp, areaHeightDp)
+                            .clickable {
+                                inputCode += area.digit
+                                val rule = TransformationRepository.findByCode(
+                                    belt = BeltType.FAIZ,
+                                    code = inputCode
+                                )
+                                if (rule != null) {
+                                    inputCode = ""
+                                    onTransformSuccess(rule)
+                                }
+                            }
+                    )
+                }
+            }
+        }
     }
 }
