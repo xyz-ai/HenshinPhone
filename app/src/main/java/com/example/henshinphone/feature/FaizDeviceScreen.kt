@@ -2,16 +2,8 @@ package com.example.henshinphone.feature
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.size
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -21,10 +13,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import com.example.henshinphone.R
-import com.example.henshinphone.data.BeltType
-import com.example.henshinphone.data.TransformationRepository
-import com.example.henshinphone.data.TransformationRule
 import kotlin.math.roundToInt
+
+// ===== 数字热区定义 =====
 
 private data class HitArea(
     val digit: String,
@@ -34,31 +25,22 @@ private data class HitArea(
     val heightRatio: Float
 )
 
-private data class KeypadRatios(
-    val left: Float,
-    val right: Float,
-    val top: Float,
-    val bottom: Float,
-    val keyWidthScale: Float,
-    val keyHeightScale: Float
-)
-
 private fun buildFaizHitAreas(): List<HitArea> {
-    val keypad = KeypadRatios(
-        left = 0.26f,
-        right = 0.74f,
-        top = 0.56f,
-        bottom = 0.88f,
-        keyWidthScale = 0.8f,
-        keyHeightScale = 0.75f
-    )
+
+    // 基于 Faiz Phone 外观的经验比例
+    val left = 0.26f
+    val right = 0.74f
+    val top = 0.56f
+    val bottom = 0.88f
 
     val columns = 3
     val rows = 4
-    val cellWidth = (keypad.right - keypad.left) / columns
-    val cellHeight = (keypad.bottom - keypad.top) / rows
-    val keyWidth = cellWidth * keypad.keyWidthScale
-    val keyHeight = cellHeight * keypad.keyHeightScale
+
+    val cellWidth = (right - left) / columns
+    val cellHeight = (bottom - top) / rows
+
+    val keyWidth = cellWidth * 0.8f
+    val keyHeight = cellHeight * 0.75f
 
     val digits = listOf(
         listOf("1", "2", "3"),
@@ -69,15 +51,13 @@ private fun buildFaizHitAreas(): List<HitArea> {
 
     return buildList {
         digits.forEachIndexed { rowIndex, row ->
-            row.forEachIndexed { columnIndex, digit ->
+            row.forEachIndexed { colIndex, digit ->
                 if (digit.isNotEmpty()) {
-                    val centerX = keypad.left + cellWidth * (columnIndex + 0.5f)
-                    val centerY = keypad.top + cellHeight * (rowIndex + 0.5f)
                     add(
                         HitArea(
                             digit = digit,
-                            centerXRatio = centerX,
-                            centerYRatio = centerY,
+                            centerXRatio = left + cellWidth * (colIndex + 0.5f),
+                            centerYRatio = top + cellHeight * (rowIndex + 0.5f),
                             widthRatio = keyWidth,
                             heightRatio = keyHeight
                         )
@@ -111,20 +91,20 @@ fun FaizDeviceScreen(
         )
 
         if (imageSize != IntSize.Zero) {
-            val imageWidthDp = with(density) { imageSize.width.toDp() }
-            val imageHeightDp = with(density) { imageSize.height.toDp() }
+            val widthDp = with(density) { imageSize.width.toDp() }
+            val heightDp = with(density) { imageSize.height.toDp() }
+
             Box(
-                modifier = Modifier
-                    .size(imageWidthDp, imageHeightDp)
-                    .align(Alignment.Center)
+                modifier = Modifier.size(widthDp, heightDp)
             ) {
                 hitAreas.forEach { area ->
                     val areaWidthPx = imageSize.width * area.widthRatio
                     val areaHeightPx = imageSize.height * area.heightRatio
-                    val offsetXPx = imageSize.width * area.centerXRatio - areaWidthPx / 2f
-                    val offsetYPx = imageSize.height * area.centerYRatio - areaHeightPx / 2f
-                    val areaWidthDp = with(density) { areaWidthPx.toDp() }
-                    val areaHeightDp = with(density) { areaHeightPx.toDp() }
+
+                    val offsetXPx =
+                        imageSize.width * area.centerXRatio - areaWidthPx / 2f
+                    val offsetYPx =
+                        imageSize.height * area.centerYRatio - areaHeightPx / 2f
 
                     Box(
                         modifier = Modifier
@@ -134,17 +114,19 @@ fun FaizDeviceScreen(
                                     y = offsetYPx.roundToInt()
                                 )
                             }
-                            .size(areaWidthDp, areaHeightDp)
+                            .size(
+                                with(density) { areaWidthPx.toDp() },
+                                with(density) { areaHeightPx.toDp() }
+                            )
                             .clickable {
                                 inputCode += area.digit
-                                val rule = TransformationRepository.findByCode(
-                                    belt = BeltType.FAIZ,
-                                    code = inputCode
-                                )
-                                if (rule != null) {
-                                    inputCode = ""
-                                    onTransformSuccess(rule)
-                                }
+
+                                TransformationRepository
+                                    .findRule(BeltType.FAIZ, inputCode)
+                                    ?.let { rule ->
+                                        inputCode = ""
+                                        onTransformSuccess(rule)
+                                    }
                             }
                     )
                 }

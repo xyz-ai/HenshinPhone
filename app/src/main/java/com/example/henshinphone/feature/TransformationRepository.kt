@@ -11,15 +11,17 @@ object TransformationRepository {
 
         BeltType.FAIZ to listOf(
             TransformationRule(
+                belt = BeltType.FAIZ,
                 code = "555",
                 name = "Faiz",
                 videoAsset = "faiz_transformation.mp4",
                 soundAsset = "faiz_transformation.mp3"
             )
-        ),
+        )
 
-        // 以后可以加
+        // 以后可以加：
         // BeltType.KAIXA to listOf(...)
+        // BeltType.DELTA to listOf(...)
     )
 
     /** 获取某条腰带的全部规则（只读） */
@@ -27,7 +29,7 @@ object TransformationRepository {
         return rules[belt].orEmpty()
     }
 
-    /** 按“腰带 + 输入码”查规则（最常用） */
+    /** 按「腰带 + 输入码」查规则（核心 API） */
     fun findRule(
         belt: BeltType,
         code: String
