@@ -31,20 +31,28 @@ fun HenshinPhoneApp() {
         )
 
         // ===============================
-        // 2️⃣ 设备界面（Faiz Phone）
+        // 2️⃣ 设备界面（直接分发）
         // ===============================
-        is Screen.Device -> DeviceScreen(
-            belt = s.belt,
-            onTransformationSelected = { rule ->
-                screen = Screen.Transforming(rule)
-            },
-            onBack = {
-                screen = Screen.Selector
-            },
-            onOpenSettings = {
-                screen = Screen.Settings
+        is Screen.Device -> {
+            when (s.belt) {
+
+                BeltType.FAIZ -> {
+                    FaizDeviceScreen(
+                        onTransformSuccess = { rule ->
+                            screen = Screen.Transforming(rule)
+                        }
+                    )
+                }
+
+                BeltType.KAIXA -> {
+                    // TODO: KaixaDeviceScreen
+                }
+
+                BeltType.DELTA -> {
+                    // TODO: DeltaDeviceScreen
+                }
             }
-        )
+        }
 
         // ===============================
         // 3️⃣ 变身中（不可返回）

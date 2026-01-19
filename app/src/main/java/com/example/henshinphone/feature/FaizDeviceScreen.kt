@@ -1,6 +1,8 @@
 package com.example.henshinphone.feature
 
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
@@ -15,34 +17,41 @@ import androidx.compose.ui.unit.IntSize
 import com.example.henshinphone.R
 import kotlin.math.roundToInt
 
-// ===== 数字热区定义 =====
+// ================================
+// 🔢 数字热区定义（纯透明）
+// ================================
 
 private data class HitArea(
     val digit: String,
-    val centerXRatio: Float,
-    val centerYRatio: Float,
-    val widthRatio: Float,
-    val heightRatio: Float
+    val cx: Float,
+    val cy: Float,
+    val w: Float,
+    val h: Float
 )
 
-private fun buildFaizHitAreas(): List<HitArea> {
+/**
+ * Faiz Phone 真机风格热区
+ * —— 只对应图片上的实体按键
+ */
+private fun buildFaizKeypadHitAreas(): List<HitArea> {
 
-    // 基于 Faiz Phone 外观的经验比例
-    val left = 0.26f
-    val right = 0.74f
-    val top = 0.56f
-    val bottom = 0.88f
+    // 👉 键盘整体区域（右侧）
+    val left = 0.66f
+    val right = 0.93f
+    val top = 0.30f
+    val bottom = 0.80f
 
-    val columns = 3
+    val cols = 3
     val rows = 4
 
-    val cellWidth = (right - left) / columns
-    val cellHeight = (bottom - top) / rows
+    val cellW = (right - left) / cols
+    val cellH = (bottom - top) / rows
 
-    val keyWidth = cellWidth * 0.8f
-    val keyHeight = cellHeight * 0.75f
+    // 按键稍微小于格子，避免误触边框
+    val keyW = cellW * 0.72f
+    val keyH = cellH * 0.72f
 
-    val digits = listOf(
+    val layout = listOf(
         listOf("1", "2", "3"),
         listOf("4", "5", "6"),
         listOf("7", "8", "9"),
@@ -50,16 +59,16 @@ private fun buildFaizHitAreas(): List<HitArea> {
     )
 
     return buildList {
-        digits.forEachIndexed { rowIndex, row ->
-            row.forEachIndexed { colIndex, digit ->
+        layout.forEachIndexed { row, line ->
+            line.forEachIndexed { col, digit ->
                 if (digit.isNotEmpty()) {
                     add(
                         HitArea(
                             digit = digit,
-                            centerXRatio = left + cellWidth * (colIndex + 0.5f),
-                            centerYRatio = top + cellHeight * (rowIndex + 0.5f),
-                            widthRatio = keyWidth,
-                            heightRatio = keyHeight
+                            cx = left + cellW * (col + 0.5f),
+                            cy = top + cellH * (row + 0.5f),
+                            w = keyW,
+                            h = keyH
                         )
                     )
                 }
@@ -68,59 +77,73 @@ private fun buildFaizHitAreas(): List<HitArea> {
     }
 }
 
+// ================================
+// 📱 Faiz Device Screen（最终版）
+// ================================
+
 @Composable
 fun FaizDeviceScreen(
     onTransformSuccess: (TransformationRule) -> Unit
 ) {
     var inputCode by remember { mutableStateOf("") }
     var imageSize by remember { mutableStateOf(IntSize.Zero) }
-    val hitAreas = remember { buildFaizHitAreas() }
+    val hitAreas = remember { buildFaizKeypadHitAreas() }
     val density = LocalDensity.current
 
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
+        // =========================
+        // 腰带主体（含真实键盘）
+        // =========================
         Image(
             painter = painterResource(R.drawable.faiz_phone_base),
             contentDescription = null,
             modifier = Modifier
-                .fillMaxWidth(0.85f)
+                .fillMaxWidth(0.9f)
                 .onSizeChanged { imageSize = it },
             contentScale = ContentScale.Fit
         )
 
+        // =========================
+        // 透明热区层
+        // =========================
         if (imageSize != IntSize.Zero) {
-            val widthDp = with(density) { imageSize.width.toDp() }
-            val heightDp = with(density) { imageSize.height.toDp() }
+
+            val wDp = with(density) { imageSize.width.toDp() }
+            val hDp = with(density) { imageSize.height.toDp() }
 
             Box(
-                modifier = Modifier.size(widthDp, heightDp)
+                modifier = Modifier.size(wDp, hDp)
             ) {
                 hitAreas.forEach { area ->
-                    val areaWidthPx = imageSize.width * area.widthRatio
-                    val areaHeightPx = imageSize.height * area.heightRatio
 
-                    val offsetXPx =
-                        imageSize.width * area.centerXRatio - areaWidthPx / 2f
-                    val offsetYPx =
-                        imageSize.height * area.centerYRatio - areaHeightPx / 2f
+                    val areaWpx = imageSize.width * area.w
+                    val areaHpx = imageSize.height * area.h
+
+                    val offsetX =
+                        imageSize.width * area.cx - areaWpx / 2f
+                    val offsetY =
+                        imageSize.height * area.cy - areaHpx / 2f
 
                     Box(
                         modifier = Modifier
                             .offset {
                                 IntOffset(
-                                    x = offsetXPx.roundToInt(),
-                                    y = offsetYPx.roundToInt()
+                                    offsetX.roundToInt(),
+                                    offsetY.roundToInt()
                                 )
                             }
                             .size(
-                                with(density) { areaWidthPx.toDp() },
-                                with(density) { areaHeightPx.toDp() }
+                                with(density) { areaWpx.toDp() },
+                                with(density) { areaHpx.toDp() }
                             )
+                            .background(Color.Red.copy(alpha = 0.35f))
                             .clickable {
                                 inputCode += area.digit
 
+                                // === 命中检测 ===
                                 TransformationRepository
                                     .findRule(BeltType.FAIZ, inputCode)
                                     ?.let { rule ->
