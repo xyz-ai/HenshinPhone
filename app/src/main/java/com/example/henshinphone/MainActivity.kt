@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.example.henshinphone.ui.theme.HenshinPhoneTheme
 import com.example.henshinphone.ui.HenshinPhoneApp
 
 class MainActivity : ComponentActivity() {
