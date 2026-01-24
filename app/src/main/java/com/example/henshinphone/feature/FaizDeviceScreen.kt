@@ -1,10 +1,8 @@
 package com.example.henshinphone.feature
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
@@ -12,47 +10,40 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.henshinphone.R
 import kotlin.math.roundToInt
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import android.media.MediaPlayer
+import androidx.compose.ui.platform.LocalContext
 
-
-// 🔧 数字键整体 Y 方向微调（负数 = 向上）
+// 🔧 已冻结参数（不要再改）
 private const val KEY_Y_OFFSET = -0.2f
 private const val KEY_X_OFFSET = 0f
-
-// 🧪 是否显示热区调试层
 private const val SHOW_KEY_DEBUG = false
+private const val SHOW_SCREEN_DEBUG = false
 
-/* ---------------------------------------------------
- * 原始图片分辨率（与你取点用的图一致）
- * --------------------------------------------------- */
 private const val BASE_W = 2048f
 private const val BASE_H = 768f
 
-/* ---------------------------------------------------
- * 热区数据结构
- * --------------------------------------------------- */
 private data class KeyHit(
     val digit: String,
-    val cx: Float, // 0~1
-    val cy: Float  // 0~1
+    val cx: Float,
+    val cy: Float,
 )
 
-/* ---------------------------------------------------
- * Faiz 数字键（你已精修好的版本）
- * --------------------------------------------------- */
+/* ------------------------------
+ * 已冻结的 Faiz 键位
+ * ------------------------------ */
 private val faizKeys = run {
     val x4 = 1499f
     val y4 = 494f
@@ -69,32 +60,33 @@ private val faizKeys = run {
         KeyHit(d, x / BASE_W, y / BASE_H)
 
     listOf(
-        key("1", x7,            y7Anchor - 1.7f * dy),
-        key("2", x7 + 0.9f*dx,  y7Anchor - 1.7f * dy),
-        key("3", x7 + 1.8f*dx,  y7Anchor - 1.7f * dy),
+        key("1", x7,             y7Anchor - 1.7f * dy),
+        key("2", x7 + 0.9f * dx, y7Anchor - 1.7f * dy),
+        key("3", x7 + 1.8f * dx, y7Anchor - 1.7f * dy),
 
-        key("4", x7,            y7Anchor - dy),
-        key("5", x7 + 0.9f*dx,  y7Anchor - dy),
-        key("6", x7 + 1.8f*dx,  y7Anchor - dy),
+        key("4", x7,             y7Anchor - dy),
+        key("5", x7 + 0.9f * dx, y7Anchor - dy),
+        key("6", x7 + 1.8f * dx, y7Anchor - dy),
 
-        key("7", x7,            y7Anchor),
-        key("8", x7 + 0.9f*dx,  y7Anchor),
-        key("9", x7 + 1.8f*dx,  y7Anchor),
+        key("7", x7,             y7Anchor),
+        key("8", x7 + 0.9f * dx, y7Anchor),
+        key("9", x7 + 1.8f * dx, y7Anchor),
     )
 }
 
-/* ---------------------------------------------------
- * 主界面
- * --------------------------------------------------- */
 @Composable
 fun FaizDeviceScreen(
     onTransformSuccess: (TransformationRule) -> Unit
 ) {
     var imageSize by remember { mutableStateOf(IntSize.Zero) }
     var inputCode by remember { mutableStateOf("") }
+    val context = LocalContext.current
+
+    val keyClickPlayer = remember {
+        MediaPlayer.create(context, R.raw.faiz_key_click)
+    }
 
     val density = LocalDensity.current
-    val haptic = LocalHapticFeedback.current
 
     Box(
         modifier = Modifier
@@ -102,9 +94,11 @@ fun FaizDeviceScreen(
             .background(Color.Black),
         contentAlignment = Alignment.Center
     ) {
+        Box(
+            modifier = Modifier.fillMaxWidth(0.95f)
+        ) {
 
-        Box(modifier = Modifier.fillMaxWidth(0.95f)) {
-
+            /* ---------------- 腰带底图 ---------------- */
             Image(
                 painter = painterResource(R.drawable.faiz_phone_base),
                 contentDescription = null,
@@ -116,21 +110,80 @@ fun FaizDeviceScreen(
 
             if (imageSize != IntSize.Zero) {
 
-                val hitRadiusPx = imageSize.width * 0.02f   // 🔽 比之前更精致
+                /* =====================================================
+                 * ① 中间屏幕反馈（只在这里！）
+                 * ===================================================== */
+                val screenLeft = imageSize.width * 0.33f
+                val screenTop = imageSize.height * 0.315f
+                val screenWidth = imageSize.width * 0.35f
+                val screenHeight = imageSize.height * 0.3f
 
-                faizKeys.forEach { key ->
+                Box(
+                    modifier = Modifier
+                        .offset {
+                            IntOffset(
+                                screenLeft.roundToInt(),
+                                screenTop.roundToInt()
+                            )
+                        }
+                        .width(with(density) { screenWidth.toDp() })
+                        .height(with(density) { screenHeight.toDp() })
+                ) {
 
-                    var pressed by remember { mutableStateOf(false) }
+                    // 🔴 屏幕泛光
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .then(
+                                if (SHOW_SCREEN_DEBUG) {
+                                    Modifier.background(
+                                        Color.Red.copy(alpha = 0.25f)
+                                    )
+                                } else {
+                                    Modifier
+                                }
+                            )
 
-                    val scale by animateFloatAsState(
-                        targetValue = if (pressed) 0.88f else 1f,
-                        animationSpec = tween(durationMillis = 80),
-                        label = "keyScale"
                     )
 
+                    // ➖ 扫描线
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(2.dp)
+                            .align(Alignment.Center)
+                            .then(
+                                if (SHOW_SCREEN_DEBUG) {
+                                    Modifier.background(
+                                        Color.Red.copy(alpha = 0.8f)
+                                    )
+                                } else {
+                                    Modifier
+                                }
+                            )
+
+                    )
+
+                    // 🔢 输入数字显示（最多 3 位）
+                    Text(
+                        text = inputCode.takeLast(3),
+                        color = Color(0xFFFF3B3B),
+                        fontSize = 65.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 15.sp,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+
+                /* =====================================================
+                 * ② 右侧按键热区（完全冻结）
+                 * ===================================================== */
+                val hitRadiusPx = imageSize.width * 0.025f
+
+                faizKeys.forEach { key ->
                     val cxPx = imageSize.width * (key.cx + KEY_X_OFFSET)
                     val cyPx = imageSize.height * (key.cy + KEY_Y_OFFSET)
-
+                    val haptic = LocalHapticFeedback.current
                     Box(
                         modifier = Modifier
                             .offset {
@@ -139,47 +192,44 @@ fun FaizDeviceScreen(
                                     (cyPx - hitRadiusPx).roundToInt()
                                 )
                             }
-                            .size(with(density) { (hitRadiusPx * 2).toDp() })
-                            .graphicsLayer {
-                                scaleX = scale
-                                scaleY = scale
-                            }
+                            .size(
+                                with(density) { (hitRadiusPx * 2).toDp() }
+                            )
                             .then(
-                                if (SHOW_KEY_DEBUG || pressed) {
+                                if (SHOW_KEY_DEBUG) {
                                     Modifier.background(
-                                        Color.Red.copy(
-                                            alpha = if (pressed) 0.6f else 0.35f
-                                        ),
+                                        Color.Red.copy(alpha = 0.35f),
                                         shape = CircleShape
                                     )
                                 } else Modifier
                             )
-                            .pointerInput(Unit) {
-                                detectTapGestures(
-                                    onPress = {
-                                        pressed = true
-                                        haptic.performHapticFeedback(
-                                            HapticFeedbackType.TextHandleMove
-                                        )
-                                        tryAwaitRelease()
-                                        pressed = false
-                                    },
-                                    onTap = {
-                                        inputCode += key.digit
-                                        TransformationRepository
-                                            .findRule(BeltType.FAIZ, inputCode)
-                                            ?.let { rule ->
-                                                inputCode = ""
-                                                onTransformSuccess(rule)
-                                            }
+                            .clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                // 🔊 播放按键音
+                                if (keyClickPlayer.isPlaying) {
+                                    keyClickPlayer.seekTo(0)
+                                }
+                                keyClickPlayer.start()
+
+                                inputCode += key.digit
+
+                                if (inputCode.length > 3) {
+                                    inputCode = inputCode.takeLast(3)
+                                }
+
+                                TransformationRepository
+                                    .findRule(BeltType.FAIZ, inputCode)
+                                    ?.let { rule ->
+                                        inputCode = ""
+                                        onTransformSuccess(rule)
                                     }
-                                )
                             }
                     )
                 }
             }
         }
 
+        /* -------- 调试显示 -------- */
         Text(
             text = "inputCode=$inputCode",
             color = Color.White,
