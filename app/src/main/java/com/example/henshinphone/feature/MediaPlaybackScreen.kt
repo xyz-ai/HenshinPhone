@@ -5,6 +5,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.example.henshinphone.feature.rule.TransformationRule
 
 @Composable
 fun MediaPlaybackScreen(

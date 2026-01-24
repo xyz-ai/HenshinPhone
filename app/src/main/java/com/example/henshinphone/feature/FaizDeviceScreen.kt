@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import android.media.MediaPlayer
 import androidx.compose.ui.platform.LocalContext
+import com.example.henshinphone.feature.rule.TransformationRule
 
 // 🔧 已冻结参数（不要再改）
 private const val KEY_Y_OFFSET = -0.2f

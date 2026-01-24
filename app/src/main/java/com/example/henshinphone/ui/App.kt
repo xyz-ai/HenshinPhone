@@ -2,6 +2,7 @@ package com.example.henshinphone.ui
 
 import androidx.compose.runtime.*
 import com.example.henshinphone.feature.*
+import com.example.henshinphone.feature.rule.TransformationRule
 
 /**
  * 应用内页面状态定义
