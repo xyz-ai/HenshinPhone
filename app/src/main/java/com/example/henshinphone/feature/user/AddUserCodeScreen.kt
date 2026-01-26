@@ -1,145 +1,135 @@
 package com.example.henshinphone.feature.user
-
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.henshinphone.feature.BeltType
 import com.example.henshinphone.feature.rule.TransformationRule
 import com.example.henshinphone.feature.rule.UserRuleStore
+import com.example.henshinphone.feature.storage.LocalStore
 
 @Composable
 fun AddUserCodeScreen(
+    belt: BeltType,
     onBack: () -> Unit,
     onSaved: () -> Unit
 ) {
-    // ===============================
-    // 1️⃣ 输入状态
-    // ===============================
+    val context = LocalContext.current
+
     var code by remember { mutableStateOf("") }
+    var selectedVideoUri by remember { mutableStateOf<Uri?>(null) }
+    var selectedFinishImageUri by remember { mutableStateOf<Uri?>(null) }
 
-    // SAF 选择结果
-    var videoUri by remember { mutableStateOf<Uri?>(null) }
-    var finishImageUri by remember { mutableStateOf<Uri?>(null) }
-
-    // ===============================
-    // 2️⃣ SAF 启动器
-    // ===============================
-
-    // 🎥 选择 MP4
-    val videoPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        uri?.let {
-            videoUri = it
+    val pickVideoLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            uri?.let {
+                context.contentResolver.takePersistableUriPermission(
+                    it,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+                selectedVideoUri = it
+            }
         }
-    }
 
-    // 🖼 选择 finish.png / jpg
-    val imagePicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        uri?.let {
-            finishImageUri = it
+
+    val pickImageLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) {
+            selectedFinishImageUri = it
         }
-    }
 
-    // ===============================
-    // 3️⃣ UI
-    // ===============================
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
+            .verticalScroll(rememberScrollState())
             .padding(24.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
 
             Text(
-                text = "ADD USER CODE",
+                text = "ADD USER CODE (${belt.name})",
                 color = Color.White,
                 style = MaterialTheme.typography.headlineSmall
             )
 
-            // ===== 输入 3 位数字密码 =====
             OutlinedTextField(
                 value = code,
                 onValueChange = {
-                    if (it.length <= 3 && it.all { c -> c.isDigit() }) {
+                    if (it.length <= 3 && it.all(Char::isDigit)) {
                         code = it
                     }
                 },
                 label = { Text("3-digit Code") },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number
-                ),
-                singleLine = true
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    focusedLabelColor = Color.White,
+                    unfocusedLabelColor = Color.LightGray,
+                    cursorColor = Color.White
+                )
             )
 
-            // ===== 选择变身动画 =====
-            Button(
-                onClick = {
-                    videoPicker.launch(arrayOf("video/*"))
-                }
-            ) {
-                Text(
-                    text = if (videoUri == null)
-                        "Select Transform Video"
-                    else
-                        "Transform Video Selected"
-                )
+
+            Button(onClick = {
+                pickVideoLauncher.launch(arrayOf("video/*"))
+            }) {
+                Text(selectedVideoUri?.let { "Video Selected" } ?: "Select Transform Video")
             }
 
-            // ===== 选择定格图（可选）=====
-            Button(
-                onClick = {
-                    imagePicker.launch(arrayOf("image/*"))
-                }
-            ) {
-                Text(
-                    text = if (finishImageUri == null)
-                        "Select Finish Image (Optional)"
-                    else
-                        "Finish Image Selected"
-                )
+            Button(onClick = {
+                pickImageLauncher.launch(arrayOf("image/*"))
+            }) {
+                Text(selectedFinishImageUri?.let { "Image Selected" } ?: "Select Finish Image")
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // ===== 保存 =====
             Button(
-                enabled = code.length == 3 && videoUri != null,
+                enabled = code.length == 3,
                 onClick = {
+                    // 保存变身规则
                     UserRuleStore.addRule(
+                        context,
                         TransformationRule(
-                            belt = BeltType.FAIZ,
+                            belt = belt,
                             code = code,
                             name = "Custom $code",
-                            videoUri = videoUri!!.toString(),
-                            finishImageUri = finishImageUri?.toString()
+                            videoUri = selectedVideoUri?.toString()
+                                ?: "android.resource://com.example.henshinphone/raw/faiz_transform_video",
+                            finishImageUri = selectedFinishImageUri?.toString()
+                                ?: "android.resource://com.example.henshinphone/drawable/faiz_transform_main"
                         )
                     )
+
+                    // ✅ 正确：读取 → 追加 → 保存
+                    val oldCodes = LocalStore.getFaizCodes(context)
+                    val newCodes = if (oldCodes.contains(code)) {
+                        oldCodes
+                    } else {
+                        oldCodes + code
+                    }
+                    LocalStore.saveFaizCodes(context, newCodes)
+
                     onSaved()
                 }
             ) {
                 Text("SAVE")
             }
 
-            // ===== 取消 =====
-            Button(
-                onClick = onBack,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.DarkGray
-                )
-            ) {
+
+            Button(onClick = onBack) {
                 Text("CANCEL")
             }
         }

@@ -15,7 +15,8 @@ import kotlinx.coroutines.delay
 
 private enum class Phase {
     PRELUDE,
-    VIDEO
+    VIDEO,
+    DONE
 }
 
 @Composable
@@ -27,6 +28,9 @@ fun TransformingOverlay(
 
     var phase by remember { mutableStateOf(Phase.PRELUDE) }
     var flashAlpha by remember { mutableStateOf(0f) }
+
+    // ✅ 关键：videoUri 为空时，不进入 VIDEO，直接结束（避免 NPE）
+    val videoUriStr = rule.videoUri
 
     // ===== 前摇 & 闪光 =====
     LaunchedEffect(Unit) {
@@ -44,7 +48,14 @@ fun TransformingOverlay(
         // 前摇总时长 ≈ 2s
         delay(1800)
 
-        phase = Phase.VIDEO
+        phase = if (videoUriStr.isNullOrBlank()) Phase.DONE else Phase.VIDEO
+    }
+
+    // DONE：立即收尾
+    LaunchedEffect(phase) {
+        if (phase == Phase.DONE) {
+            onFinished()
+        }
     }
 
     Box(
@@ -63,25 +74,31 @@ fun TransformingOverlay(
         }
 
         // ===== 视频播放 =====
-        if (phase == Phase.VIDEO) {
+        if (phase == Phase.VIDEO && !videoUriStr.isNullOrBlank()) {
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
                 factory = { ctx ->
                     VideoView(ctx).apply {
 
-                        setVideoURI(Uri.parse(rule.videoUri))
+                        // ✅ 这里保证非空再 parse
+                        setVideoURI(Uri.parse(videoUriStr))
 
                         setOnPreparedListener { mp ->
-                            val volume =
-                                if (AppSettings.soundEnabled) 1f else 0f
+                            val volume = if (AppSettings.soundEnabled) 1f else 0f
+                            start()
                             mp.setVolume(volume, volume)
+
                         }
 
                         setOnCompletionListener {
                             onFinished()
                         }
 
-                        start()
+                        setOnErrorListener { _, _, _ ->
+                            // ✅ 播放失败也别崩，直接结束
+                            onFinished()
+                            true
+                        }
                     }
                 }
             )

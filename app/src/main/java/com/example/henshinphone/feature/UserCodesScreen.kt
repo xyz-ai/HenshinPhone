@@ -1,107 +1,92 @@
-package com.example.henshinphone.feature
+package com.example.henshinphone.feature.user
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.henshinphone.feature.TransformationRepository
+import com.example.henshinphone.feature.BeltType
+import com.example.henshinphone.feature.storage.LocalStore
 import com.example.henshinphone.feature.rule.UserRuleStore
 
 @Composable
 fun UserCodesScreen(
-    belt: BeltType = BeltType.FAIZ,
     onBack: () -> Unit,
-    onAdd: () -> Unit
+    onAddNew: () -> Unit
 ) {
-    val builtInRules = TransformationRepository.getRulesForBelt(belt)
-    val userRules = UserRuleStore.getRulesForBelt(belt)
+    val context = LocalContext.current
+
+    var codes by remember { mutableStateOf<List<String>>(emptyList()) }
+    var loaded by remember { mutableStateOf(false) }
+
+    // ✅ 延迟加载，避免组合期 crash
+    LaunchedEffect(Unit) {
+        codes = LocalStore.getFaizCodes(context)
+        loaded = true
+    }
+
+    fun refresh() {
+        codes = LocalStore.getFaizCodes(context)
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0E0E0E))
+            .background(Color.Black)
+            .padding(24.dp)
     ) {
-
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(24.dp),
+            modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
             Text(
-                text = "USER CODES",
+                text = "USER CODES (FAIZ)",
                 color = Color.White,
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // ===== 内置规则 =====
-            Text(
-                text = "BUILT-IN",
-                color = Color(0xFFAAAAAA),
-                style = MaterialTheme.typography.labelLarge
-            )
-
-            builtInRules.forEach { rule ->
-                CodeRow(
-                    code = rule.code,
-                    name = rule.name,
-                    tag = "DEFAULT"
-                )
+            Button(
+                onClick = onAddNew,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6A4FB3))
+            ) {
+                Text("ADD CODE", color = Color.White)
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Divider(color = Color(0xFF333333))
 
-            // ===== 用户规则 =====
-            Text(
-                text = "USER",
-                color = Color(0xFFAAAAAA),
-                style = MaterialTheme.typography.labelLarge
-            )
-
-            if (userRules.isEmpty()) {
-                Text(
-                    text = "No user codes yet",
-                    color = Color(0xFF666666),
-                    modifier = Modifier.padding(top = 8.dp)
-                )
+            if (!loaded) {
+                Text("Loading...", color = Color.Gray)
+            } else if (codes.isEmpty()) {
+                Text("No user codes yet.", color = Color.Gray)
             } else {
-                userRules.forEach { rule ->
-                    CodeRow(
-                        code = rule.code,
-                        name = rule.name,
-                        tag = "USER"
-                    )
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(codes) { code ->
+                        CodeItem(
+                            code = code,
+                            onDelete = {
+                                UserRuleStore.removeRule(context, BeltType.FAIZ, code)
+                                LocalStore.clearFaizCodes(context)
+                                refresh()
+                            }
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
-            Button(
-                onClick = onAdd,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF6A4FB3)
-                )
-            ) {
-                Text("ADD CODE")
-            }
-
-            Button(
-                onClick = onBack,
-                modifier = Modifier.align(Alignment.Start),
-                shape = RoundedCornerShape(50)
-            ) {
+            Button(onClick = onBack) {
                 Text("BACK")
             }
         }
@@ -109,39 +94,28 @@ fun UserCodesScreen(
 }
 
 @Composable
-private fun CodeRow(
+private fun CodeItem(
     code: String,
-    name: String,
-    tag: String
+    onDelete: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(
-                color = Color(0xFF1A1A1A),
-                shape = RoundedCornerShape(12.dp)
-            )
+            .background(Color(0xFF1C1C1C), MaterialTheme.shapes.medium)
             .padding(16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+        verticalAlignment = Alignment.CenterVertically
     ) {
-
-        Column {
-            Text(
-                text = code,
-                color = Color.White,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = name,
-                color = Color(0xFF999999),
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
+        Text(
+            text = code,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f)
+        )
 
         Text(
-            text = tag,
-            color = if (tag == "USER") Color(0xFF7C4DFF) else Color(0xFF777777),
-            style = MaterialTheme.typography.labelSmall
+            text = "DELETE",
+            color = Color(0xFFFF6B6B),
+            modifier = Modifier.clickable { onDelete() }
         )
     }
 }

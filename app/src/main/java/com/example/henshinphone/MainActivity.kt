@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.example.henshinphone.feature.AppSettings
 import com.example.henshinphone.ui.theme.HenshinPhoneTheme
 import com.example.henshinphone.ui.HenshinPhoneApp
 
@@ -13,7 +14,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        AppSettings.load(this)
         // ① 允许内容绘制到系统栏后面（关键）
         WindowCompat.setDecorFitsSystemWindows(window, false)
 

@@ -3,26 +3,24 @@ package com.example.henshinphone.ui
 import androidx.compose.runtime.*
 import com.example.henshinphone.feature.*
 import com.example.henshinphone.feature.finished.FinishedDisplayScreen
+import com.example.henshinphone.feature.rule.TransformationRule
 import com.example.henshinphone.feature.transforming.TransformingOverlayHost
 import com.example.henshinphone.feature.user.AddUserCodeScreen
+import com.example.henshinphone.feature.user.UserCodesScreen
 
-/**
- * 应用入口 Composable
- * ⚠️ 这里只做“页面调度 + Overlay 挂载”
- */
 @Composable
 fun HenshinPhoneApp() {
 
     var screen by remember { mutableStateOf<Screen>(Screen.Selector) }
+    var lastTransformRule by remember { mutableStateOf<TransformationRule?>(null) }
 
-    // 🔴 全局变身 Overlay（不属于任何 Screen）
     TransformingOverlayHost { startTransform ->
 
         when (val s = screen) {
 
-            // ===============================
-            // 1️⃣ 腰带选择界面
-            // ===============================
+            /** =========================
+             *  腰带选择界面
+             *  ========================= */
             Screen.Selector -> DeviceSelectorScreen(
                 onDeviceSelected = { belt ->
                     screen = Screen.Device(belt)
@@ -30,86 +28,78 @@ fun HenshinPhoneApp() {
                 onOpenSettings = {
                     screen = Screen.Settings
                 }
-
             )
 
-            // ===============================
-            // 2️⃣ 设备界面（按腰带分发）
-            // ===============================
+            /** =========================
+             *  腰带设备界面
+             *  ========================= */
             is Screen.Device -> {
                 when (s.belt) {
-
                     BeltType.FAIZ -> {
                         FaizDeviceScreen(
                             onTransformSuccess = { rule ->
-                                // 🔥 不切 Screen，直接触发 Overlay
+                                lastTransformRule = rule
                                 startTransform(rule) {
-                                    // 变身演出结束 → 进入定格完成态
                                     screen = Screen.Finished
                                 }
                             }
                         )
                     }
 
-                    BeltType.KAIXA -> {
-                        // TODO: KaixaDeviceScreen
-                    }
-
-                    BeltType.DELTA -> {
-                        // TODO: DeltaDeviceScreen
+                    // 预留：后续腰带
+                    else -> {
+                        // TODO: other belts
                     }
                 }
             }
 
-            // ===============================
-            // 3️⃣ 变身完成定格界面
-            // ===============================
+            /** =========================
+             *  变身完成展示
+             *  ========================= */
             Screen.Finished -> {
-                FinishedDisplayScreen(
-                    onBackToSelector = {
-                        screen = Screen.Selector
-                    }
-                )
+                lastTransformRule?.let { rule ->
+                    FinishedDisplayScreen(
+                        rule = rule,
+                        onBackToSelector = {
+                            screen = Screen.Selector
+                        }
+                    )
+                }
             }
 
-            // ===============================
-            // 4️⃣ 设置界面
-            // ===============================
+            /** =========================
+             *  设置界面
+             *  ========================= */
             Screen.Settings -> {
                 SettingsScreen(
-                    onBack = {
-                        screen = Screen.Selector
-                    },
-                    onOpenUserCodes = {
-                        screen = Screen.UserCodes
-                    }
+                    onBack = { screen = Screen.Selector },
+                    onOpenUserCodes = { screen = Screen.UserCodes }
                 )
             }
-            // ===============================
-            // 5️⃣ 用户自定义变身密码列表
-            // ===============================
+
+            /** =========================
+             *  用户密码列表（当前固定 FAIZ）
+             *  ========================= */
             Screen.UserCodes -> {
                 UserCodesScreen(
-                    onBack = {
-                        screen = Screen.Settings
-                    },
-                    onAdd = { screen = Screen.AddUserCode }
-                )
-            }
-            // ===============================
-            // 6️⃣ 添加用户自定义密码
-            // ===============================
-            Screen.AddUserCode -> {
-                AddUserCodeScreen(
-                    onBack = {
-                        screen = Screen.UserCodes
-                    },
-                    onSaved = {
-                        screen = Screen.UserCodes
+                    onBack = { screen = Screen.Settings },
+                    onAddNew = {
+                        // 当前阶段：固定从 FAIZ 进入
+                        screen = Screen.AddUserCode(BeltType.FAIZ)
                     }
                 )
             }
 
+            /** =========================
+             *  添加用户密码
+             *  ========================= */
+            is Screen.AddUserCode -> {
+                AddUserCodeScreen(
+                    belt = s.belt,
+                    onBack = { screen = Screen.UserCodes },
+                    onSaved = { screen = Screen.UserCodes }
+                )
+            }
         }
     }
 }

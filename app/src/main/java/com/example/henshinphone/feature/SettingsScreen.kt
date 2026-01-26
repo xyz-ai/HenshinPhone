@@ -7,49 +7,56 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.henshinphone.feature.storage.LocalStore
 
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
-    onOpenUserCodes: () -> Unit = {},
-    onOpenAnimations: () -> Unit = {}
+    onOpenUserCodes: () -> Unit
 ) {
+    val context = LocalContext.current
+
+    // ✅ 真正绑定 LocalStore
+    var soundEnabled by remember {
+        mutableStateOf(LocalStore.isSoundEnabled(context))
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF0E0E0E))
     ) {
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 32.dp, vertical = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+                .padding(horizontal = 24.dp, vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
 
             Text(
                 text = "SETTINGS",
-                style = MaterialTheme.typography.headlineMedium,
                 color = Color.White,
+                style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Divider(color = Color(0xFF333333))
 
             SettingRowWithSwitch(
                 title = "Sound Effect",
                 subtitle = "变身音效开关",
-                checked = AppSettings.soundEnabled,
+                checked = soundEnabled,
                 onCheckedChange = { enabled ->
-                    AppSettings.soundEnabled = enabled
+                    soundEnabled = enabled
+                    LocalStore.setSoundEnabled(context, enabled)
                 }
             )
 
@@ -57,22 +64,15 @@ fun SettingsScreen(
 
             SettingRow(
                 title = "User Codes",
-                subtitle = "自定义变身密码",
+                subtitle = "自定义变身密码（FAIZ）",
                 highlight = true,
                 onClick = onOpenUserCodes
             )
 
-            SettingRow(
-                title = "Animations",
-                subtitle = "变身动画管理",
-                onClick = onOpenAnimations
-            )
-
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             Button(
                 onClick = onBack,
-                modifier = Modifier.align(Alignment.Start),
                 shape = RoundedCornerShape(50),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF6A4FB3)
@@ -81,7 +81,7 @@ fun SettingsScreen(
                 Text(
                     text = "BACK",
                     color = Color.White,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)
                 )
             }
         }
@@ -93,27 +93,21 @@ private fun SettingRow(
     title: String,
     subtitle: String,
     highlight: Boolean = false,
-    onClick: (() -> Unit)? = null
+    onClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                color = if (highlight) Color(0xFF2A1E4F) else Color.Transparent,
-                shape = RoundedCornerShape(12.dp)
+                color = if (highlight) Color(0xFF241A3A) else Color.Transparent,
+                shape = RoundedCornerShape(14.dp)
             )
-            .clickable(enabled = onClick != null) {
-                onClick?.invoke()
-            }
-            .padding(vertical = 14.dp, horizontal = 12.dp)
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 14.dp)
     ) {
         Text(text = title, color = Color.White, fontWeight = FontWeight.Medium)
         Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = subtitle,
-            color = Color(0xFF9A9A9A),
-            style = MaterialTheme.typography.bodySmall
-        )
+        Text(text = subtitle, color = Color(0xFF9A9A9A))
     }
 }
 
@@ -127,20 +121,14 @@ private fun SettingRowWithSwitch(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 12.dp, horizontal = 12.dp),
+            .background(Color(0xFF1C1C1C), RoundedCornerShape(14.dp))
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
+        Column(modifier = Modifier.weight(1f)) {
             Text(text = title, color = Color.White, fontWeight = FontWeight.Medium)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = subtitle,
-                color = Color(0xFF9A9A9A),
-                style = MaterialTheme.typography.bodySmall
-            )
+            Text(text = subtitle, color = Color(0xFF9A9A9A))
         }
 
         Switch(

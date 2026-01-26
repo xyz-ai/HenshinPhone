@@ -9,7 +9,7 @@ data class TransformationRule(
     val name: String,
 
     // SAF / 本地 / assets 都统一用 Uri 字符串
-    val videoUri: String,
+    val videoUri: String?,
 
     // 可选：完成定格图
     val finishImageUri: String?

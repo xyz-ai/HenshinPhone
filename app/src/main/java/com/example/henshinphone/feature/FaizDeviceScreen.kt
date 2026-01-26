@@ -26,6 +26,8 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import android.media.MediaPlayer
 import androidx.compose.ui.platform.LocalContext
 import com.example.henshinphone.feature.rule.TransformationRule
+import com.example.henshinphone.feature.rule.UserRuleStore
+import com.example.henshinphone.feature.storage.LocalStore
 
 // 🔧 已冻结参数（不要再改）
 private const val KEY_Y_OFFSET = -0.2f
@@ -206,25 +208,37 @@ fun FaizDeviceScreen(
                             )
                             .clickable {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                // 🔊 播放按键音
-                                if (keyClickPlayer.isPlaying) {
-                                    keyClickPlayer.seekTo(0)
+
+                                if (LocalStore.isSoundEnabled(context)) {
+                                    if (keyClickPlayer.isPlaying) {
+                                        keyClickPlayer.seekTo(0)
+                                    }
+                                    keyClickPlayer.start()
                                 }
-                                keyClickPlayer.start()
 
                                 inputCode += key.digit
-
                                 if (inputCode.length > 3) {
                                     inputCode = inputCode.takeLast(3)
                                 }
 
-                                TransformationRepository
-                                    .findRule(BeltType.FAIZ, inputCode)
-                                    ?.let { rule ->
-                                        inputCode = ""
-                                        onTransformSuccess(rule)
-                                    }
+                                val rule =
+                                    UserRuleStore.findRule(BeltType.FAIZ, inputCode)
+                                        ?: TransformationRepository.findRule(BeltType.FAIZ, inputCode)
+
+// ✅ 关键修复：校验规则完整性
+                                if (
+                                    rule != null &&
+                                    (
+                                            rule.videoUri != null ||
+                                                    rule.finishImageUri != null
+                                            )
+                                ) {
+                                    inputCode = ""
+                                    onTransformSuccess(rule)
+                                }
+
                             }
+
                     )
                 }
             }
